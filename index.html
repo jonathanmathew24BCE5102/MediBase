@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hospital DBMS</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#0a0e1a; --surface:#111827; --surface2:#1a2236; --border:#1e2d45;
+  --accent:#00d4aa; --accent2:#4f8ef7; --accent3:#f7934f; --danger:#f74f4f;
+  --text:#e8edf5; --muted:#5a7090; --card-radius:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* ── LOGIN PAGE ── */
+#login-page {
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;z-index:1000;
+}
+.login-box {
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:48px 40px;width:380px;
+}
+.login-logo {
+  font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;
+  color:var(--accent);text-align:center;margin-bottom:6px;
+}
+.login-sub { color:var(--muted);font-size:0.72rem;text-align:center;margin-bottom:36px; }
+.login-box .form-group { margin-bottom:18px; }
+.login-box label { font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px; }
+.login-box input {
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:12px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.82rem;outline:none;
+  transition:border-color 0.15s;
+}
+.login-box input:focus { border-color:var(--accent2); }
+.login-err { color:var(--danger);font-size:0.72rem;margin-top:-10px;margin-bottom:14px;display:none; }
+.btn-login {
+  width:100%;background:var(--accent);color:#0a0e1a;border:none;border-radius:8px;
+  padding:13px;font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;
+  cursor:pointer;transition:all 0.15s;margin-top:6px;
+}
+.btn-login:hover { background:#00f0c0; }
+
+/* ── APP (hidden until login) ── */
+#app { display:none; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  position:fixed;top:0;left:0;width:230px;height:100vh;
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:28px 0;z-index:100;
+}
+.logo {
+  font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--accent);
+  padding:0 24px 24px;border-bottom:1px solid var(--border);letter-spacing:-0.5px;line-height:1.3;
+}
+.logo span{color:var(--muted);font-size:0.68rem;font-weight:400;display:block;margin-top:4px;}
+.nav{margin-top:16px;flex:1;overflow-y:auto;}
+.nav-item {
+  display:flex;align-items:center;gap:12px;padding:10px 24px;cursor:pointer;
+  font-size:0.77rem;color:var(--muted);border-left:3px solid transparent;transition:all 0.15s;
+}
+.nav-item:hover{color:var(--text);background:var(--surface2);}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(0,212,170,0.06);}
+.nav-item .icon{font-size:1rem;width:18px;text-align:center;}
+.nav-logout {
+  padding:16px 24px;border-top:1px solid var(--border);
+  font-size:0.72rem;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:8px;
+  transition:color 0.15s;
+}
+.nav-logout:hover{color:var(--danger);}
+
+/* ── MAIN ── */
+.main{margin-left:230px;padding:36px 40px;min-height:100vh;}
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:28px;}
+.page-title{font-family:'Syne',sans-serif;font-size:1.9rem;font-weight:800;color:var(--text);letter-spacing:-1px;}
+.page-subtitle{color:var(--muted);font-size:0.72rem;margin-top:4px;}
+.header-actions{display:flex;gap:10px;align-items:center;}
+
+/* ── STAT CARDS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:20px 22px;position:relative;overflow:hidden;transition:border-color 0.2s;}
+.stat-card:hover{border-color:var(--accent2);}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card:nth-child(1)::before{background:var(--accent);}
+.stat-card:nth-child(2)::before{background:var(--accent2);}
+.stat-card:nth-child(3)::before{background:var(--accent3);}
+.stat-card:nth-child(4)::before{background:#c084fc;}
+.stat-label{font-size:0.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.stat-value{font-family:'Syne',sans-serif;font-size:1.9rem;font-weight:800;color:var(--text);line-height:1;}
+.stat-sub{font-size:0.66rem;color:var(--muted);margin-top:6px;}
+
+/* ── SECTION ── */
+.section{display:none;}
+.section.active{display:block;}
+
+/* ── CARD ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);overflow:hidden;margin-bottom:24px;}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--surface2);}
+.card-title{font-family:'Syne',sans-serif;font-size:0.92rem;font-weight:700;color:var(--text);letter-spacing:-0.3px;}
+.card-header-right{display:flex;gap:8px;align-items:center;}
+.badge{background:rgba(0,212,170,0.12);color:var(--accent);font-size:0.63rem;padding:3px 10px;border-radius:20px;border:1px solid rgba(0,212,170,0.2);}
+
+/* ── SEARCH BAR ── */
+.search-bar {
+  padding:12px 22px;border-bottom:1px solid var(--border);background:var(--bg);
+}
+.search-bar input {
+  width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:9px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.78rem;outline:none;transition:border-color 0.15s;
+}
+.search-bar input:focus{border-color:var(--accent2);}
+.search-bar input::placeholder{color:var(--muted);}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+thead tr{background:rgba(255,255,255,0.02);}
+th{padding:11px 16px;text-align:left;font-size:0.63rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:11px 16px;border-bottom:1px solid rgba(30,45,69,0.5);color:var(--text);font-size:0.79rem;}
+tbody tr:hover{background:rgba(79,142,247,0.04);}
+tbody tr:last-child td{border-bottom:none;}
+.mono{font-family:'DM Mono',monospace;color:var(--accent);}
+.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:0.66rem;}
+.tag-blue {background:rgba(79,142,247,0.15);color:var(--accent2);border:1px solid rgba(79,142,247,0.2);}
+.tag-green{background:rgba(0,212,170,0.12);color:var(--accent);border:1px solid rgba(0,212,170,0.2);}
+.tag-orange{background:rgba(247,147,79,0.12);color:var(--accent3);border:1px solid rgba(247,147,79,0.2);}
+.tag-purple{background:rgba(192,132,252,0.12);color:#c084fc;border:1px solid rgba(192,132,252,0.2);}
+.action-btns{display:flex;gap:6px;}
+.del-btn{background:none;border:1px solid rgba(247,79,79,0.3);color:var(--danger);font-size:0.66rem;padding:3px 9px;border-radius:6px;cursor:pointer;transition:all 0.15s;font-family:'DM Mono',monospace;}
+.del-btn:hover{background:rgba(247,79,79,0.1);border-color:var(--danger);}
+.edit-btn{background:none;border:1px solid rgba(79,142,247,0.3);color:var(--accent2);font-size:0.66rem;padding:3px 9px;border-radius:6px;cursor:pointer;transition:all 0.15s;font-family:'DM Mono',monospace;}
+.edit-btn:hover{background:rgba(79,142,247,0.1);border-color:var(--accent2);}
+.empty{text-align:center;padding:36px;color:var(--muted);font-size:0.78rem;}
+
+/* ── BUTTONS ── */
+.btn{background:var(--accent);color:#0a0e1a;border:none;border-radius:8px;padding:9px 18px;font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.btn:hover{background:#00f0c0;transform:translateY(-1px);}
+.btn-blue{background:var(--accent2);}
+.btn-blue:hover{background:#7aabff;}
+.btn-orange{background:var(--accent3);}
+.btn-orange:hover{background:#ffad77;}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:9px 16px;font-family:'DM Mono',monospace;font-size:0.76rem;cursor:pointer;transition:all 0.15s;}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:6px 14px;font-size:0.74rem;}
+
+/* ── INSERT FORM ── */
+.insert-section{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;padding:22px;}
+.form-group{display:flex;flex-direction:column;gap:7px;}
+.form-group label{font-size:0.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.form-group input,.form-group select{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 13px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.79rem;transition:border-color 0.15s;outline:none;}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent2);}
+.form-group select option{background:var(--surface);}
+.form-full{grid-column:1/-1;}
+
+/* ── ANALYTICS ── */
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.bar-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.bar-label{font-size:0.74rem;color:var(--text);min-width:130px;}
+.bar-track{flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width 0.6s ease;}
+.bar-val{font-size:0.7rem;color:var(--muted);min-width:60px;text-align:right;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:500;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:32px;width:480px;max-width:94vw;max-height:90vh;overflow-y:auto;transform:translateY(16px);transition:transform 0.2s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:22px;letter-spacing:-0.3px;}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modal-grid .form-group{display:flex;flex-direction:column;gap:7px;}
+.modal-full{grid-column:1/-1;}
+.modal-actions{display:flex;gap:10px;margin-top:22px;justify-content:flex-end;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--accent);color:var(--accent);padding:11px 20px;border-radius:10px;font-size:0.78rem;z-index:999;transform:translateY(20px);opacity:0;transition:all 0.25s;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.error{border-color:var(--danger);color:var(--danger);}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ LOGIN PAGE ═══════════════════ -->
+<div id="login-page">
+  <div class="login-box">
+    <div class="login-logo">🏥 MediBase</div>
+    <div class="login-sub">Hospital Database Management System</div>
+    <div class="form-group">
+      <label>Username</label>
+      <input id="l-user" type="text" placeholder="admin" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input id="l-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="login-err" id="l-err">Invalid username or password</div>
+    <button class="btn-login" onclick="doLogin()">Login →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════ MAIN APP ═══════════════════ -->
+<div id="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">🏥 MediBase<span>Hospital DBMS v2.0</span></div>
+  <nav class="nav">
+    <div class="nav-item active" data-sec="dashboard"        onclick="goto(this,'dashboard')">        <span class="icon">📊</span><span>Dashboard</span></div>
+    <div class="nav-item"        data-sec="patients"         onclick="goto(this,'patients')">         <span class="icon">🧑‍⚕️</span><span>Patients</span></div>
+    <div class="nav-item"        data-sec="doctors"          onclick="goto(this,'doctors')">          <span class="icon">👨‍⚕️</span><span>Doctors</span></div>
+    <div class="nav-item"        data-sec="appointments"     onclick="goto(this,'appointments')">     <span class="icon">📅</span><span>Appointments</span></div>
+    <div class="nav-item"        data-sec="treatments"       onclick="goto(this,'treatments')">       <span class="icon">💊</span><span>Treatments</span></div>
+    <div class="nav-item"        data-sec="medicines"        onclick="goto(this,'medicines')">        <span class="icon">🧪</span><span>Medicines</span></div>
+    <div class="nav-item"        data-sec="bills"            onclick="goto(this,'bills')">            <span class="icon">💰</span><span>Billing</span></div>
+    <div class="nav-item"        data-sec="inc-treatment"    onclick="goto(this,'inc-treatment')">   <span class="icon">🔗</span><span>Includes Treatment</span></div>
+    <div class="nav-item"        data-sec="insert"           onclick="goto(this,'insert')">           <span class="icon">➕</span><span>Insert Data</span></div>
+  </nav>
+  <div class="nav-logout" onclick="doLogout()">🚪 <span>Logout</span></div>
+</aside>
+
+<main class="main">
+
+<!-- ── DASHBOARD ── -->
+<div id="sec-dashboard" class="section active">
+  <div class="page-header">
+    <div><div class="page-title">Dashboard</div><div class="page-subtitle">Live overview of your hospital database</div></div>
+    <button class="btn" onclick="loadDashboard()">🔄 Refresh</button>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">Total Revenue</div><div class="stat-value" id="stat-revenue">—</div><div class="stat-sub">from all bills</div></div>
+    <div class="stat-card"><div class="stat-label">Patients</div><div class="stat-value" id="stat-patients">—</div><div class="stat-sub">registered</div></div>
+    <div class="stat-card"><div class="stat-label">Doctors</div><div class="stat-value" id="stat-doctors">—</div><div class="stat-sub">on staff</div></div>
+    <div class="stat-card"><div class="stat-label">Appointments</div><div class="stat-value" id="stat-appointments">—</div><div class="stat-sub">scheduled</div></div>
+  </div>
+  <div class="analytics-grid">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Patients per Doctor</div></div>
+      <div style="padding:20px 24px" id="chart-ppd"><div class="empty">Loading…</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Medicine Cost per Treatment</div></div>
+      <div style="padding:20px 24px" id="chart-mct"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PATIENTS ── -->
+<div id="sec-patients" class="section">
+  <div class="page-header">
+    <div><div class="page-title">Patients</div><div class="page-subtitle">All registered patients</div></div>
+    <div class="header-actions">
+      <button class="btn-outline" onclick="exportCSV('patients')">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Patient Records</div><span class="badge" id="badge-patients">0 rows</span></div>
+    <div class="search-bar"><input id="search-patients" placeholder="🔍  Search by name, city, gender…" oninput="filterTable('patients')"/></div>
+    <div class="table-wrap"><table id="tbl-patients"><thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Gender</th><th>Phone</th><th>Address</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<!-- ── DOCTORS ── -->
+<div id="sec-doctors" class="section">
+  <div class="page-header">
+    <div><div class="page-title">Doctors</div><div class="page-subtitle">Medical staff</div></div>
+    <div class="header-actions">
+      <button class="btn-outline" onclick="exportCSV('doctors')">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Doctor Records</div><span class="badge" id="badge-doctors">0 rows</span></div>
+    <div class="search-bar"><input id="search-doctors" placeholder="🔍  Search by name, specialization…" oninput="filterTable('doctors')"/></div>
+    <div class="table-wrap"><table id="tbl-doctors"><thead><tr><th>ID</th><th>Name</th><th>Specialization</th><th>Phone</th><th>Salary</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<!-- ── APPOINTMENTS ── -->
+<div id="sec-appointments" class="section">
+  <div class="page-header">
+    <div><div class="page-title">Appointments</div><div class="page-subtitle">Scheduled visits</div></div>
+    <div class="header-actions">
+      <button class="btn-outline" onclick="exportCSV('appointments')">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Appointment Records</div><span class="badge" id="badge-appointments">0 rows</span></div>
+    <div class="search-bar"><input id="search-appointments" placeholder="🔍  Search by patient, doctor, date…" oninput="filterTable('appointments')"/></div>
+    <div class="table-wrap"><table id="tbl-appointments"><thead><tr><th>ID</th><th>Patient</th><th>Doctor</th><th>Date</th><th>Time</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<!-- ── TREATMENTS ── -->
+<div id="sec-treatments" class="section">
+  <div class="page-header">
+    <div><div class="page-title">Treatments</div><div class="page-subtitle">Available treatments</div></div>
+    <div class="header-actions">
+      <button class="btn-outline" onclick="exportCSV('treatments')">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Treatment Records</div><span class="badge" id="badge-treatments">0 rows</span></div>
+    <div class="search-bar"><input id="search-treatments" placeholder="🔍  Search by treatment name…" oninput="filterTable('treatments')"/></div>
+    <div class="table-wrap"><table id="tbl-treatments"><thead><tr><th>ID</th><th>Treatment Name</th><th>Description</th><th>Cost</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<!-- ── MEDICINES ── -->
+<div id="sec-medicines" class="section">
+  <div class="page-header">
+    <div><div class="page-title">Medicines</div><div class="page-subtitle">Medicine inventory</div></div>
+    <div class="header-actions">
+      <button class="btn-outline" onclick="exportCSV('medicines')">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Medicine Records</div><span class="badge" id="badge-medicines">0 rows</span></div>
+    <div class="search-bar"><input id="search-medicines" placeholder="🔍  Search by medicine name…" oninput="filterTable('medicines')"/></div>
+    <div class="table-wrap"><table id="tbl-medicines"><thead><tr><th>ID</th><th>Medicine</th><th>Price</th><th>Qty</th><th>Treatment ID</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<!-- ── BILLS ── -->
+<div id="sec-bills" class="section">
+  <div class="page-header">
+    <div><div class="page-title">Billing</div><div class="page-subtitle">Patient bills and revenue</div></div>
+    <div class="header-actions">
+      <button class="btn-outline" onclick="exportCSV('bills')">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Bill Records</div><span class="badge" id="badge-bills">0 rows</span></div>
+    <div class="search-bar"><input id="search-bills" placeholder="🔍  Search by patient name, date…" oninput="filterTable('bills')"/></div>
+    <div class="table-wrap"><table id="tbl-bills"><thead><tr><th>Bill ID</th><th>Patient</th><th>Date</th><th>Amount</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<!-- ── INCLUDES TREATMENT ── -->
+<div id="sec-inc-treatment" class="section">
+  <div class="page-header">
+    <div><div class="page-title">Includes Treatment</div><div class="page-subtitle">Junction table — treatments linked to appointments</div></div>
+    <div class="header-actions">
+      <button class="btn-outline" onclick="exportCSV('includes-treatment')">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Includes_Treatment Records</div><span class="badge" id="badge-inc-treatment">0 rows</span></div>
+    <div class="search-bar"><input id="search-inc-treatment" placeholder="🔍  Search by treatment, patient, doctor…" oninput="filterTable('inc-treatment')"/></div>
+    <div class="table-wrap"><table id="tbl-inc-treatment"><thead><tr><th>Treatment ID</th><th>Treatment Name</th><th>Appointment ID</th><th>Patient</th><th>Doctor</th><th>Date</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<!-- ── INSERT DATA ── -->
+<div id="sec-insert" class="section">
+  <div class="page-header">
+    <div><div class="page-title">Insert Data</div><div class="page-subtitle">Add new records directly to the database</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">➕ Add Patient</div></div>
+    <div class="insert-section">
+      <div class="form-group"><label>Patient ID</label><input id="p-id" type="number" placeholder="e.g. 6"/></div>
+      <div class="form-group"><label>Name</label><input id="p-name" placeholder="Full name"/></div>
+      <div class="form-group"><label>Age</label><input id="p-age" type="number" placeholder="e.g. 25"/></div>
+      <div class="form-group"><label>Gender</label><select id="p-gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+      <div class="form-group"><label>Phone</label><input id="p-phone" placeholder="10-digit number"/></div>
+      <div class="form-group"><label>Address</label><input id="p-address" placeholder="City / Area"/></div>
+      <div class="form-full"><button class="btn" onclick="insertPatient()">Insert Patient</button></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">➕ Add Doctor</div></div>
+    <div class="insert-section">
+      <div class="form-group"><label>Doctor ID</label><input id="d-id" type="number" placeholder="e.g. 106"/></div>
+      <div class="form-group"><label>Name</label><input id="d-name" placeholder="Dr. Full Name"/></div>
+      <div class="form-group"><label>Specialization</label><input id="d-spec" placeholder="e.g. Cardiology"/></div>
+      <div class="form-group"><label>Phone</label><input id="d-phone" placeholder="10-digit number"/></div>
+      <div class="form-group"><label>Salary</label><input id="d-salary" type="number" placeholder="e.g. 75000"/></div>
+      <div class="form-full"><button class="btn btn-blue" onclick="insertDoctor()">Insert Doctor</button></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">➕ Add Appointment</div></div>
+    <div class="insert-section">
+      <div class="form-group"><label>Appointment ID</label><input id="a-id" type="number" placeholder="e.g. 408"/></div>
+      <div class="form-group"><label>Patient ID</label><input id="a-pid" type="number" placeholder="Must exist in Patients"/></div>
+      <div class="form-group"><label>Doctor ID</label><input id="a-did" type="number" placeholder="Must exist in Doctors"/></div>
+      <div class="form-group"><label>Date</label><input id="a-date" type="date"/></div>
+      <div class="form-group"><label>Time</label><input id="a-time" type="time"/></div>
+      <div class="form-full"><button class="btn btn-orange" onclick="insertAppointment()">Book Appointment</button></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">➕ Add Bill</div></div>
+    <div class="insert-section">
+      <div class="form-group"><label>Bill ID</label><input id="b-id" type="number" placeholder="e.g. 506"/></div>
+      <div class="form-group"><label>Patient ID</label><input id="b-pid" type="number" placeholder="Must exist in Patients"/></div>
+      <div class="form-group"><label>Date</label><input id="b-date" type="date"/></div>
+      <div class="form-group"><label>Amount (₹)</label><input id="b-amount" type="number" placeholder="e.g. 3000"/></div>
+      <div class="form-full"><button class="btn" onclick="insertBill()">Add Bill</button></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">➕ Add Medicine</div></div>
+    <div class="insert-section">
+      <div class="form-group"><label>Medicine ID</label><input id="m-id" type="number" placeholder="e.g. 311"/></div>
+      <div class="form-group"><label>Medicine Name</label><input id="m-name" placeholder="e.g. Ibuprofen"/></div>
+      <div class="form-group"><label>Price (₹)</label><input id="m-price" type="number" placeholder="e.g. 120"/></div>
+      <div class="form-group"><label>Quantity</label><input id="m-qty" type="number" placeholder="e.g. 10"/></div>
+      <div class="form-group"><label>Treatment ID</label><input id="m-tid" type="number" placeholder="e.g. 201"/></div>
+      <div class="form-full"><button class="btn btn-blue" onclick="insertMedicine()">Add Medicine</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">➕ Add Includes Treatment (Junction)</div></div>
+    <div class="insert-section">
+      <div class="form-group"><label>Treatment ID</label><input id="it-tid" type="number" placeholder="e.g. 201"/></div>
+      <div class="form-group"><label>Appointment ID</label><input id="it-aid" type="number" placeholder="e.g. 401"/></div>
+      <div class="form-full"><button class="btn btn-orange" onclick="insertIncludesTreatment()">Link Treatment to Appointment</button></div>
+    </div>
+  </div>
+</div>
+
+</main>
+</div><!-- end #app -->
+
+<!-- ══ EDIT MODAL ══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-title" id="modal-title">Edit Record</div>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-blue" id="modal-save-btn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const BASE = "http://localhost:3000/api";
+let cache = {};
+let currentEditType = null;
+let currentEditId   = null;
+
+// ── LOGIN / LOGOUT ───────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('l-user').value.trim();
+  const password = document.getElementById('l-pass').value;
+  try {
+    const r = await fetch(BASE + '/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username, password})
+    });
+    if (!r.ok) throw new Error('bad');
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadDashboard();
+  } catch {
+    const err = document.getElementById('l-err');
+    err.style.display = 'block';
+    setTimeout(()=>err.style.display='none', 3000);
+  }
+}
+function doLogout() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('l-user').value = '';
+  document.getElementById('l-pass').value = '';
+}
+
+// ── NAVIGATION ───────────────────────────────────────────────
+function goto(el, section) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-'+section).classList.add('active');
+  el.classList.add('active');
+  if (section === 'dashboard') loadDashboard();
+  else if (section !== 'insert') loadTable(section);
+}
+
+// ── TOAST ────────────────────────────────────────────────────
+function toast(msg, error=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (error?' error':'');
+  setTimeout(()=>t.className='toast', 2800);
+}
+
+// ── API ──────────────────────────────────────────────────────
+async function api(method, path, body) {
+  try {
+    const r = await fetch(BASE + path, {
+      method,
+      headers:{'Content-Type':'application/json'},
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Request failed');
+    return d;
+  } catch(e) {
+    toast('❌ ' + e.message, true);
+    throw e;
+  }
+}
+
+// ── SEARCH / FILTER ──────────────────────────────────────────
+function filterTable(name) {
+  const q = document.getElementById('search-'+name).value.toLowerCase();
+  const rows = document.querySelectorAll('#tbl-'+name+' tbody tr');
+  rows.forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ── CSV EXPORT ───────────────────────────────────────────────
+function exportCSV(name) {
+  const data = cache[name];
+  if (!data || !data.length) { toast('No data to export', true); return; }
+  const headers = Object.keys(data[0]);
+  const rows = data.map(r => headers.map(h => `"${String(r[h]||'').replace(/"/g,'""')}"`).join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = name + '.csv'; a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ Exported ' + name + '.csv');
+}
+
+// ── RENDER TABLES ────────────────────────────────────────────
+function renderPatients(data) {
+  document.getElementById('badge-patients').textContent = data.length + ' rows';
+  document.querySelector('#tbl-patients tbody').innerHTML = data.map(r=>`<tr>
+    <td class="mono">#${r.patient_id}</td><td>${r.name}</td><td>${r.age}</td>
+    <td><span class="tag ${r.gender==='Male'?'tag-blue':'tag-purple'}">${r.gender}</span></td>
+    <td>${r.phone}</td><td>${r.address}</td>
+    <td><div class="action-btns">
+      <button class="edit-btn" onclick="openEdit('patients',${r.patient_id})">edit</button>
+      <button class="del-btn"  onclick="del('patients',${r.patient_id})">delete</button>
+    </div></td>
+  </tr>`).join('') || `<tr><td colspan="7" class="empty">No records found</td></tr>`;
+}
+
+function renderDoctors(data) {
+  document.getElementById('badge-doctors').textContent = data.length + ' rows';
+  document.querySelector('#tbl-doctors tbody').innerHTML = data.map(r=>`<tr>
+    <td class="mono">#${r.doctor_id}</td><td>${r.name}</td>
+    <td><span class="tag tag-green">${r.specialization}</span></td>
+    <td>${r.phone}</td><td>₹${Number(r.salary).toLocaleString()}</td>
+    <td><div class="action-btns">
+      <button class="edit-btn" onclick="openEdit('doctors',${r.doctor_id})">edit</button>
+      <button class="del-btn"  onclick="del('doctors',${r.doctor_id})">delete</button>
+    </div></td>
+  </tr>`).join('') || `<tr><td colspan="6" class="empty">No records found</td></tr>`;
+}
+
+function renderAppointments(data) {
+  document.getElementById('badge-appointments').textContent = data.length + ' rows';
+  document.querySelector('#tbl-appointments tbody').innerHTML = data.map(r=>`<tr>
+    <td class="mono">#${r.appointment_id}</td><td>${r.patient_name}</td><td>${r.doctor_name}</td>
+    <td>${r.appointment_date?r.appointment_date.slice(0,10):''}</td>
+    <td>${r.appointment_time?r.appointment_time.slice(0,5):''}</td>
+    <td><div class="action-btns">
+      <button class="edit-btn" onclick="openEdit('appointments',${r.appointment_id})">edit</button>
+      <button class="del-btn"  onclick="del('appointments',${r.appointment_id})">delete</button>
+    </div></td>
+  </tr>`).join('') || `<tr><td colspan="6" class="empty">No records found</td></tr>`;
+}
+
+function renderTreatments(data) {
+  document.getElementById('badge-treatments').textContent = data.length + ' rows';
+  document.querySelector('#tbl-treatments tbody').innerHTML = data.map(r=>`<tr>
+    <td class="mono">#${r.treatment_id}</td><td>${r.treatment_name}</td>
+    <td>${r.description}</td><td class="mono">₹${r.cost}</td>
+  </tr>`).join('') || `<tr><td colspan="4" class="empty">No records found</td></tr>`;
+}
+
+function renderMedicines(data) {
+  document.getElementById('badge-medicines').textContent = data.length + ' rows';
+  document.querySelector('#tbl-medicines tbody').innerHTML = data.map(r=>`<tr>
+    <td class="mono">#${r.medicine_id}</td><td>${r.medicine_name}</td>
+    <td class="mono">₹${r.price}</td><td>${r.quantity}</td>
+    <td class="mono">#${r.treatment_id}</td>
+    <td><div class="action-btns">
+      <button class="edit-btn" onclick="openEdit('medicines',${r.medicine_id})">edit</button>
+      <button class="del-btn"  onclick="del('medicines',${r.medicine_id})">delete</button>
+    </div></td>
+  </tr>`).join('') || `<tr><td colspan="6" class="empty">No records found</td></tr>`;
+}
+
+function renderBills(data) {
+  document.getElementById('badge-bills').textContent = data.length + ' rows';
+  document.querySelector('#tbl-bills tbody').innerHTML = data.map(r=>`<tr>
+    <td class="mono">#${r.bill_id}</td><td>${r.patient_name}</td>
+    <td>${r.bill_date?r.bill_date.slice(0,10):''}</td>
+    <td class="mono" style="color:var(--accent3)">₹${Number(r.amount).toLocaleString()}</td>
+    <td><div class="action-btns">
+      <button class="edit-btn" onclick="openEdit('bills',${r.bill_id})">edit</button>
+      <button class="del-btn"  onclick="del('bills',${r.bill_id})">delete</button>
+    </div></td>
+  </tr>`).join('') || `<tr><td colspan="5" class="empty">No records found</td></tr>`;
+}
+
+function renderIncTreatment(data) {
+  document.getElementById('badge-inc-treatment').textContent = data.length + ' rows';
+  document.querySelector('#tbl-inc-treatment tbody').innerHTML = data.map(r=>`<tr>
+    <td class="mono">#${r.treatment_id}</td>
+    <td><span class="tag tag-orange">${r.treatment_name}</span></td>
+    <td class="mono">#${r.appointment_id}</td>
+    <td>${r.patient_name}</td><td>${r.doctor_name}</td>
+    <td>${r.appointment_date?r.appointment_date.slice(0,10):''}</td>
+  </tr>`).join('') || `<tr><td colspan="6" class="empty">No records found</td></tr>`;
+}
+
+// ── LOAD TABLE ───────────────────────────────────────────────
+const renderMap = {
+  patients: renderPatients, doctors: renderDoctors, appointments: renderAppointments,
+  treatments: renderTreatments, medicines: renderMedicines, bills: renderBills,
+  'inc-treatment': renderIncTreatment
+};
+const apiMap = {
+  patients:'patients', doctors:'doctors', appointments:'appointments',
+  treatments:'treatments', medicines:'medicines', bills:'bills',
+  'inc-treatment':'includes-treatment'
+};
+
+async function loadTable(name) {
+  const data = await api('GET', '/' + apiMap[name]);
+  cache[name] = data;
+  renderMap[name](data);
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────
+async function loadDashboard() {
+  const [patients, doctors, appointments, revenue, ppd, mct] = await Promise.all([
+    api('GET','/patients'), api('GET','/doctors'), api('GET','/appointments'),
+    api('GET','/analytics/revenue'),
+    api('GET','/analytics/patients-per-doctor'),
+    api('GET','/analytics/medicine-cost'),
+  ]);
+  document.getElementById('stat-patients').textContent     = patients.length;
+  document.getElementById('stat-doctors').textContent      = doctors.length;
+  document.getElementById('stat-appointments').textContent = appointments.length;
+  document.getElementById('stat-revenue').textContent      = '₹'+Number(revenue.total||0).toLocaleString();
+
+  const maxPPD = Math.max(...ppd.map(r=>r.total),1);
+  document.getElementById('chart-ppd').innerHTML = ppd.map(r=>`
+    <div class="bar-row">
+      <div class="bar-label">${r.doctor_name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(r.total/maxPPD*100).toFixed(1)}%;background:var(--accent2)"></div></div>
+      <div class="bar-val">${r.total} pts</div>
+    </div>`).join('') || '<div class="empty">No data</div>';
+
+  const maxMCT = Math.max(...mct.map(r=>r.total_cost),1);
+  document.getElementById('chart-mct').innerHTML = mct.map(r=>`
+    <div class="bar-row">
+      <div class="bar-label">${r.treatment_name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(r.total_cost/maxMCT*100).toFixed(1)}%;background:var(--accent3)"></div></div>
+      <div class="bar-val">₹${Number(r.total_cost).toLocaleString()}</div>
+    </div>`).join('') || '<div class="empty">No data</div>';
+}
+
+// ── DELETE ───────────────────────────────────────────────────
+async function del(type, id) {
+  if (!confirm(`Delete record #${id} from ${type}?`)) return;
+  await api('DELETE', `/${apiMap[type]||type}/${id}`);
+  toast(`✅ Deleted from ${type}`);
+  loadTable(type);
+}
+
+// ── EDIT MODAL ───────────────────────────────────────────────
+function fi(id){ return `<input id="ef-${id}" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 13px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.79rem;outline:none;" />`; }
+function fl(label, id){ return `<div class="form-group modal-full"><label style="font-size:0.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:7px;">${label}</label>${fi(id)}</div>`; }
+function fh(label, id){ return `<div class="form-group"><label style="font-size:0.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:7px;">${label}</label>${fi(id)}</div>`; }
+
+const editForms = {
+  patients: (r) => ({
+    title: `Edit Patient #${r.patient_id}`,
+    html: `<div class="modal-grid">${fh('Name','name')}${fh('Age','age')}${fh('Gender','gender')}${fh('Phone','phone')}${fl('Address','address')}</div>`,
+    fill: () => { sv('name',r.name);sv('age',r.age);sv('gender',r.gender);sv('phone',r.phone);sv('address',r.address); },
+    save: () => api('PUT',`/patients/${r.patient_id}`,{name:gv('name'),age:gv('age'),gender:gv('gender'),phone:gv('phone'),address:gv('address')})
+  }),
+  doctors: (r) => ({
+    title: `Edit Doctor #${r.doctor_id}`,
+    html: `<div class="modal-grid">${fh('Name','name')}${fh('Specialization','spec')}${fh('Phone','phone')}${fh('Salary','salary')}</div>`,
+    fill: () => { sv('name',r.name);sv('spec',r.specialization);sv('phone',r.phone);sv('salary',r.salary); },
+    save: () => api('PUT',`/doctors/${r.doctor_id}`,{name:gv('name'),specialization:gv('spec'),phone:gv('phone'),salary:gv('salary')})
+  }),
+  appointments: (r) => ({
+    title: `Edit Appointment #${r.appointment_id}`,
+    html: `<div class="modal-grid">${fh('Patient ID','pid')}${fh('Doctor ID','did')}${fh('Date (YYYY-MM-DD)','date')}${fh('Time (HH:MM)','time')}</div>`,
+    fill: () => { sv('pid',r.patient_id);sv('did',r.doctor_id);sv('date',r.appointment_date?r.appointment_date.slice(0,10):'');sv('time',r.appointment_time?r.appointment_time.slice(0,5):''); },
+    save: () => api('PUT',`/appointments/${r.appointment_id}`,{patient_id:gv('pid'),doctor_id:gv('did'),appointment_date:gv('date'),appointment_time:gv('time')})
+  }),
+  bills: (r) => ({
+    title: `Edit Bill #${r.bill_id}`,
+    html: `<div class="modal-grid">${fh('Patient ID','pid')}${fh('Amount (₹)','amount')}${fl('Date (YYYY-MM-DD)','date')}</div>`,
+    fill: () => { sv('pid',r.patient_id);sv('amount',r.amount);sv('date',r.bill_date?r.bill_date.slice(0,10):''); },
+    save: () => api('PUT',`/bills/${r.bill_id}`,{patient_id:gv('pid'),amount:gv('amount'),bill_date:gv('date')})
+  }),
+  medicines: (r) => ({
+    title: `Edit Medicine #${r.medicine_id}`,
+    html: `<div class="modal-grid">${fh('Medicine Name','mname')}${fh('Price (₹)','price')}${fh('Quantity','qty')}${fh('Treatment ID','tid')}</div>`,
+    fill: () => { sv('mname',r.medicine_name);sv('price',r.price);sv('qty',r.quantity);sv('tid',r.treatment_id); },
+    save: () => api('PUT',`/medicines/${r.medicine_id}`,{medicine_name:gv('mname'),price:gv('price'),quantity:gv('qty'),treatment_id:gv('tid')})
+  }),
+};
+
+function sv(id, val){ const el=document.getElementById('ef-'+id); if(el)el.value=val??''; }
+function gv(id){ const el=document.getElementById('ef-'+id); return el?el.value.trim():''; }
+
+async function openEdit(type, id) {
+  const rec = cache[type]?.find(r => {
+    const key = type==='patients'?'patient_id':type==='doctors'?'doctor_id':type==='appointments'?'appointment_id':type==='bills'?'bill_id':'medicine_id';
+    return r[key] == id;
+  });
+  if (!rec) { toast('Record not found in cache, please reload', true); return; }
+  const form = editForms[type](rec);
+  currentEditType = type;
+  currentEditId   = id;
+  document.getElementById('modal-title').textContent = form.title;
+  document.getElementById('modal-body').innerHTML    = form.html;
+  form.fill();
+  document.getElementById('modal-save-btn').onclick = async () => {
+    await form.save();
+    toast('✅ Record updated!');
+    closeModal();
+    loadTable(type);
+  };
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ── INSERTS ──────────────────────────────────────────────────
+function v(id){ return document.getElementById(id).value.trim(); }
+function clear(...ids){ ids.forEach(id=>document.getElementById(id).value=''); }
+
+async function insertPatient() {
+  if (!v('p-id')||!v('p-name')) return toast('ID and Name are required',true);
+  await api('POST','/patients',{patient_id:v('p-id'),name:v('p-name'),age:v('p-age'),gender:v('p-gender'),phone:v('p-phone'),address:v('p-address')});
+  toast('✅ Patient added!'); clear('p-id','p-name','p-age','p-phone','p-address');
+}
+async function insertDoctor() {
+  if (!v('d-id')||!v('d-name')) return toast('ID and Name are required',true);
+  await api('POST','/doctors',{doctor_id:v('d-id'),name:v('d-name'),specialization:v('d-spec'),phone:v('d-phone'),salary:v('d-salary')});
+  toast('✅ Doctor added!'); clear('d-id','d-name','d-spec','d-phone','d-salary');
+}
+async function insertAppointment() {
+  if (!v('a-id')||!v('a-pid')||!v('a-did')) return toast('Fill all required fields',true);
+  await api('POST','/appointments',{appointment_id:v('a-id'),appointment_date:v('a-date'),appointment_time:v('a-time'),patient_id:v('a-pid'),doctor_id:v('a-did')});
+  toast('✅ Appointment booked!'); clear('a-id','a-date','a-time','a-pid','a-did');
+}
+async function insertBill() {
+  if (!v('b-id')||!v('b-pid')) return toast('Fill all required fields',true);
+  await api('POST','/bills',{bill_id:v('b-id'),bill_date:v('b-date'),amount:v('b-amount'),patient_id:v('b-pid')});
+  toast('✅ Bill added!'); clear('b-id','b-date','b-amount','b-pid');
+}
+async function insertMedicine() {
+  if (!v('m-id')||!v('m-name')) return toast('Fill all required fields',true);
+  await api('POST','/medicines',{medicine_id:v('m-id'),medicine_name:v('m-name'),price:v('m-price'),quantity:v('m-qty'),treatment_id:v('m-tid')});
+  toast('✅ Medicine added!'); clear('m-id','m-name','m-price','m-qty','m-tid');
+}
+async function insertIncludesTreatment() {
+  if (!v('it-tid')||!v('it-aid')) return toast('Both fields are required',true);
+  await api('POST','/includes-treatment',{treatment_id:v('it-tid'),appointment_id:v('it-aid')});
+  toast('✅ Treatment linked to appointment!'); clear('it-tid','it-aid');
+}
+</script>
+</body>
+</html>
