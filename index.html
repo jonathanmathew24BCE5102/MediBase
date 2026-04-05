@@ -447,7 +447,10 @@ tbody tr:last-child td{border-bottom:none;}
 <div class="toast" id="toast"></div>
 
 <script>
-const BASE = "http://localhost:3000/api";
+// ✅ FIXED: Changed from "http://localhost:3000/api" to "/api"
+// This makes it work both on Render (live) and locally
+const BASE = "/api";
+
 let cache = {};
 let currentEditType = null;
 let currentEditId   = null;
